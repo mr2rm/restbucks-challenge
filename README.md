@@ -9,7 +9,7 @@ restbucks coffee shop orders via REST APIs.
 In restbucks, the manager can define variety of products via admin panel. Customers 
 are able to order and customize their coffee with several options. Order can have a 
 status: waiting, preparation, ready, delivered. Manager can chagne orders status. 
-After each status change on order you should notify the customer via email.
+After each status change on order, you should notify the customer via email.
 
 Here is sample catalog of products offered by restbucks:
 
@@ -28,7 +28,7 @@ For the sake of simplicity, consider each product has a constant price no matter
 Note: UI is not important, you can use django admin UI.
 
 The following REST APIs should be implemented and any customer should be able to consume the API 
-usign a secure way:
+using a secure way:
 
 - View Menu (list of products)
 - Order at coffee shop with options
@@ -54,7 +54,7 @@ this. **Do not start development before getting a confirmation from us**.
 
 ## Tests
 
-- Write unit tests for your code with a good coverage
+- Write unit tests for your code with good coverage
 
 ## Task
 
