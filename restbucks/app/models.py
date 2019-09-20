@@ -1,6 +1,9 @@
 from django.contrib.auth.models import User
+from django.core.exceptions import ValidationError
 from django.db import models
 from django.utils.text import slugify
+
+from app.functions import convert_to_text
 
 
 class AbstractTimeStamped(models.Model):
@@ -83,6 +86,17 @@ class OrderItem(AbstractTimeStamped):
 		(GINGER, 'زنجبیلی'),
 	]
 
+	default_values = {
+		'size': SMALL,
+		'shots': SINGLE,
+	}
+	customization_options = {
+		'milk': ['latte'],
+		'size': ['cappuccino', 'hot-chocolate'],
+		'shots': ['espresso'],
+		'kind': ['cookie'],
+	}
+
 	order = models.ForeignKey(Order, verbose_name='سفارش')
 	product = models.ForeignKey(Product, verbose_name='محصول')
 	count = models.PositiveIntegerField(verbose_name='تعداد')
@@ -107,3 +121,12 @@ class OrderItem(AbstractTimeStamped):
 		verbose_name = 'مورد سفارش'
 		verbose_name_plural = 'اقلام سفارش'
 		default_related_name = 'order_item_set'
+
+	def clean(self):
+		super(OrderItem, self).clean()
+		for field, products in self.customization_options:
+			if getattr(self, field, None):
+				if self.product.slug not in products:
+					raise ValidationError("'%s' option is only valid for %s" % (field, convert_to_text(products)))
+			elif field in self.default_values:
+				setattr(self, field, self.default_values[field])
