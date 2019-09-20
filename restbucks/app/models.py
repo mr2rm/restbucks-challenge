@@ -24,9 +24,11 @@ class Product(AbstractTimeStamped):
 		verbose_name_plural = 'محصولات'
 		default_related_name = 'product_set'
 
+	def __str__(self):
+		return self.name
+
 	def save(self, *args, **kwargs):
-		if not self.slug:
-			self.slug = slugify(self.name)
+		self.slug = slugify(self.name)
 		super(Product, self).save(*args, **kwargs)
 
 
@@ -37,27 +39,35 @@ class Order(AbstractTimeStamped):
 	STATUS_CHOICES = [
 		(WAITING, 'در انتظار'),
 		(PREPARATION, 'در حال آماده سازی'),
-		(READY, 'آماده'),
+		(READY, 'آماده شده'),
 		(DELIVERED, 'تحویل داده شده'),
 	]
-	CONSUME_LOCATION_CHOICES = [
-		(TAKE_AWAY, 'بیرون بر'),
+	DELIVERY_METHOD_CHOICES = [
 		(IN_SHOP, 'در فروشگاه'),
+		(TAKE_AWAY, 'بیرون بر'),
 	]
 
 	customer = models.OneToOneField(User, null=True, on_delete=models.SET_NULL, verbose_name='مشتری')
 	products = models.ManyToManyField(Product, through='OrderItem', verbose_name='محصولات')
 	status = models.CharField(max_length=20, choices=STATUS_CHOICES, default=WAITING, verbose_name='وضعیت')
-	consume_location = models.CharField(
-		max_length=20, null=True, blank=True,
-		choices=CONSUME_LOCATION_CHOICES, default=IN_SHOP
+	delivery_method = models.CharField(
+		max_length=20, null=True, blank=True, verbose_name='نحوه تحویل',
+		choices=DELIVERY_METHOD_CHOICES, default=IN_SHOP
 	)
-	address = models.TextField(null=True, blank=True, verbose_name='آدرس')
+	delivery_address = models.TextField(null=True, blank=True, verbose_name='آدرس تحویل')
 
 	class Meta:
 		verbose_name = 'سفارش'
 		verbose_name_plural = 'سفارش‌ها'
 		default_related_name = 'order_set'
+
+	def __str__(self):
+		return '%d (%s)' % (self.id, self.get_status_display())
+
+	def clean(self):
+		super(Order, self).clean()
+		if self.delivery_method == self.TAKE_AWAY and not self.delivery_address:
+			raise ValidationError({'delivery_address': ['This field is required.']})
 
 
 class OrderItem(AbstractTimeStamped):
@@ -67,9 +77,9 @@ class OrderItem(AbstractTimeStamped):
 	CHOCOLATE_CHIP, GINGER = 'chocolate_chip', 'ginger'
 
 	MILK_CHOICES = [
-		(SKIM, 'کف (کم)'),
-		(SEMI, 'نصف (متوسط)'),
-		(WHOLE, 'کامل (زیاد)'),
+		(SKIM, 'کف - کم'),
+		(SEMI, 'نصف - متوسط'),
+		(WHOLE, 'کامل - زیاد'),
 	]
 	SIZE_CHOICES = [
 		(SMALL, 'کوچک'),
@@ -99,7 +109,7 @@ class OrderItem(AbstractTimeStamped):
 
 	order = models.ForeignKey(Order, verbose_name='سفارش')
 	product = models.ForeignKey(Product, verbose_name='محصول')
-	count = models.PositiveIntegerField(verbose_name='تعداد')
+	count = models.PositiveIntegerField(default=1, verbose_name='تعداد')
 	milk = models.CharField(
 		max_length=20, null=True, blank=True, choices=MILK_CHOICES,
 		verbose_name='شیر', help_text='Latte'
@@ -122,11 +132,14 @@ class OrderItem(AbstractTimeStamped):
 		verbose_name_plural = 'اقلام سفارش'
 		default_related_name = 'order_item_set'
 
+	def __str__(self):
+		return '%s (%d)' % (self.product.name, self.count)
+
 	def clean(self):
 		super(OrderItem, self).clean()
-		for field, products in self.customization_options:
+		for field, products in self.customization_options.items():
 			if getattr(self, field, None):
 				if self.product.slug not in products:
-					raise ValidationError("'%s' option is only valid for %s" % (field, convert_to_text(products)))
-			elif field in self.default_values:
+					raise ValidationError({field: ["This option is only valid for %s" % convert_to_text(products)]})
+			elif field in self.default_values and self.product.slug in products:
 				setattr(self, field, self.default_values[field])
