@@ -1,0 +1,68 @@
+[
+  {
+    "model": "app.product",
+    "pk": 1,
+    "fields": {
+      "created_at": "2019-09-20T13:15:25.913Z",
+      "last_modified": "2019-09-20T13:15:25.913Z",
+      "name": "Latte",
+      "slug": "latte",
+      "price": 9000
+    }
+  },
+  {
+    "model": "app.product",
+    "pk": 2,
+    "fields": {
+      "created_at": "2019-09-20T13:19:14.258Z",
+      "last_modified": "2019-09-20T13:19:14.258Z",
+      "name": "Cappuccino",
+      "slug": "cappuccino",
+      "price": 9000
+    }
+  },
+  {
+    "model": "app.product",
+    "pk": 3,
+    "fields": {
+      "created_at": "2019-09-20T13:19:30.808Z",
+      "last_modified": "2019-09-20T13:19:30.808Z",
+      "name": "Espresso",
+      "slug": "espresso",
+      "price": 8000
+    }
+  },
+  {
+    "model": "app.product",
+    "pk": 4,
+    "fields": {
+      "created_at": "2019-09-20T13:20:06.041Z",
+      "last_modified": "2019-09-20T13:22:16.335Z",
+      "name": "Tea",
+      "slug": "tea",
+      "price": 6000
+    }
+  },
+  {
+    "model": "app.product",
+    "pk": 5,
+    "fields": {
+      "created_at": "2019-09-20T13:23:09.614Z",
+      "last_modified": "2019-09-20T13:23:09.614Z",
+      "name": "Hot Chocolate",
+      "slug": "hot-chocolate",
+      "price": 9000
+    }
+  },
+  {
+    "model": "app.product",
+    "pk": 6,
+    "fields": {
+      "created_at": "2019-09-20T13:23:50.209Z",
+      "last_modified": "2019-09-20T13:23:50.209Z",
+      "name": "Cookie",
+      "slug": "cookie",
+      "price": 3000
+    }
+  }
+]
