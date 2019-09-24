@@ -1,0 +1,2 @@
+- `python manage.py drf_create_token <username>`
+- `python manage.py drf_create_token -r <username>`
