@@ -4,5 +4,5 @@ def convert_to_text(item_list):
 		sep = ''
 		if text:
 			sep = ' and ' if i + 1 == len(item_list) else ', '
-		text += '%s"%s"' % (sep, item)
+		text += "%s'%s'" % (sep, item)
 	return text

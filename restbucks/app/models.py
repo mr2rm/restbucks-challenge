@@ -47,7 +47,7 @@ class Order(AbstractTimeStamped):
 		(TAKE_AWAY, 'بیرون بر'),
 	]
 
-	customer = models.OneToOneField(User, null=True, on_delete=models.SET_NULL, verbose_name='مشتری')
+	customer = models.ForeignKey(User, verbose_name='مشتری')
 	products = models.ManyToManyField(Product, through='OrderItem', verbose_name='محصولات')
 	status = models.CharField(max_length=20, choices=STATUS_CHOICES, default=WAITING, verbose_name='وضعیت')
 	delivery_method = models.CharField(

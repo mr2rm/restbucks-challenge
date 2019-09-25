@@ -4,7 +4,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.viewsets import ModelViewSet
 
 from app.models import Product, Order
-from app.serializers import ProductSerializer, OrderSerializer
+from app.serializers import ProductSerializer, OrderSerializer, OrderCreateSerializer
 
 
 class ListProduct(ListAPIView):
@@ -17,6 +17,11 @@ class OrderViewSet(ModelViewSet):
 	permission_classes = (IsAuthenticated,)
 	authentication_classes = (TokenAuthentication,)
 	queryset = Order.objects.all()
+
+	def get_serializer_class(self):
+		if self.action in ['create', 'update']:
+			return OrderCreateSerializer
+		return super(OrderViewSet, self).get_serializer_class()
 
 	def get_queryset(self):
 		if not self.request.user.is_staff:
