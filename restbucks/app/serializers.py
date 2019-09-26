@@ -23,7 +23,7 @@ class OrderItemSerializer(serializers.ModelSerializer):
 
 	class Meta:
 		model = OrderItem
-		fields = ['product', 'count', 'price', 'options']
+		fields = ['product', 'count', 'options', 'price']
 
 	def get_options(self, order_item):
 		options_data = OptionsSerializer(instance=order_item).data
@@ -73,23 +73,34 @@ class OrderCreateSerializer(serializers.ModelSerializer):
 		return OrderSerializer(instance=instance).data
 
 	def validate(self, attrs):
-		if attrs.get('delivery_method') == Order.TAKE_AWAY and not attrs.get('delivery_address'):
-			raise ValidationError({'delivery_address': ['This field is required.']})
+		errors = {}
 
-		has_error, errors = False, []
+		if attrs.get('delivery_method') == Order.TAKE_AWAY and not attrs.get('delivery_address'):
+			errors.update({'delivery_address': ['This field is required.']})
+
+		has_error, products_errors = False, []
 		for item in attrs['products']:
 			product, item_errors = item['product'], {}
-			for key in item.get('options', {}):
-				if product.slug not in OrderItem.customization_options.get(key, []):
-					has_error = True
-					key_errors = item_errors.setdefault('options', {}).setdefault(key, [])
-					key_errors.append("The option is not available.")
-			errors.append(item_errors)
+			options = item.setdefault('options', {})
+
+			for key, products in OrderItem.customization_options.items():
+				if options.get(key):
+					if product.slug not in products:
+						key_errors = item_errors.setdefault('options', {}).setdefault(key, [])
+						key_errors.append("This option is not available for the product.")
+
+				elif key in OrderItem.default_values and product.slug in products:
+					options.update({key: OrderItem.default_values[key]})
+
+			has_error |= bool(item_errors)
+			products_errors.append(item_errors)
 
 		if has_error:
-			raise ValidationError({'products': errors})
+			errors.update({'products': products_errors})
 
-		# TODO: set default values
+		if errors:
+			raise ValidationError(errors)
+
 		return attrs
 
 	def create(self, validated_data):

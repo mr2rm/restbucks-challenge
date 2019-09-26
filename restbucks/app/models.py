@@ -140,6 +140,6 @@ class OrderItem(AbstractTimeStamped):
 		for field, products in self.customization_options.items():
 			if getattr(self, field, None):
 				if self.product.slug not in products:
-					raise ValidationError({field: ["This option is only valid for %s" % convert_to_text(products)]})
+					raise ValidationError({field: ["This option is not available for the product."]})
 			elif field in self.default_values and self.product.slug in products:
 				setattr(self, field, self.default_values[field])
