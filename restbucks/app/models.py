@@ -47,13 +47,14 @@ class Order(AbstractTimeStamped):
 	]
 
 	customer = models.ForeignKey(User, verbose_name='مشتری')
-	products = models.ManyToManyField(Product, through='OrderItem', verbose_name='محصولات')
+	items = models.ManyToManyField(Product, through='OrderItem', verbose_name='اقلام')
 	status = models.CharField(max_length=20, choices=STATUS_CHOICES, default=WAITING, verbose_name='وضعیت')
 	delivery_method = models.CharField(
 		max_length=20, null=True, blank=True, verbose_name='نحوه تحویل',
 		choices=DELIVERY_METHOD_CHOICES, default=IN_SHOP
 	)
 	delivery_address = models.TextField(null=True, blank=True, verbose_name='آدرس تحویل')
+	is_active = models.BooleanField(default=True, verbose_name='فعال')
 
 	class Meta:
 		verbose_name = 'سفارش'

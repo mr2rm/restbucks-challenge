@@ -41,11 +41,11 @@ class OrderItemSerializer(serializers.ModelSerializer):
 class OrderSerializer(serializers.ModelSerializer):
 	customer = serializers.StringRelatedField()
 	total_price = serializers.SerializerMethodField()
-	products = OrderItemSerializer(many=True, source='order_item_set')
+	items = OrderItemSerializer(many=True, source='order_item_set')
 
 	class Meta:
 		model = Order
-		exclude = ['last_modified']
+		exclude = ['is_active', 'last_modified']
 
 	@staticmethod
 	def get_total_price(order):
@@ -61,17 +61,17 @@ class OrderItemCreateUpdateSerializer(serializers.ModelSerializer):
 
 
 class OrderCreateUpdateSerializer(serializers.ModelSerializer):
-	products = OrderItemCreateUpdateSerializer(many=True)
+	items = OrderItemCreateUpdateSerializer(many=True)
 
 	class Meta:
 		model = Order
-		fields = ['products', 'delivery_method', 'delivery_address']
+		fields = ['items', 'delivery_method', 'delivery_address']
 
 	@staticmethod
 	def create_order_items(order, data):
-		for order_item in data:
-			options = order_item.pop('options', {})
-			OrderItem.objects.create(**order_item, **options, order=order)
+		for item in data:
+			options = item.pop('options', {})
+			OrderItem.objects.create(**item, **options, order=order)
 
 	def validate(self, attrs):
 		errors = {}
@@ -79,8 +79,8 @@ class OrderCreateUpdateSerializer(serializers.ModelSerializer):
 		if attrs.get('delivery_method') == Order.TAKE_AWAY and not attrs.get('delivery_address'):
 			errors.update({'delivery_address': ['This field is required.']})
 
-		has_error, products_errors = False, []
-		for item in attrs['products']:
+		has_error, items_errors = False, []
+		for item in attrs['items']:
 			product, item_errors = item['product'], {}
 			options = item.setdefault('options', {})
 
@@ -94,10 +94,10 @@ class OrderCreateUpdateSerializer(serializers.ModelSerializer):
 					options.update({key: OrderItem.default_values[key]})
 
 			has_error |= bool(item_errors)
-			products_errors.append(item_errors)
+			items_errors.append(item_errors)
 
 		if has_error:
-			errors.update({'products': products_errors})
+			errors.update({'items': items_errors})
 
 		if errors:
 			raise ValidationError(errors)
@@ -105,17 +105,17 @@ class OrderCreateUpdateSerializer(serializers.ModelSerializer):
 		return attrs
 
 	def create(self, validated_data):
-		products = validated_data.pop('products')
+		items = validated_data.pop('items')
 		request = self.context['request']
 		order = Order.objects.create(**validated_data, customer=request.user)
-		self.create_order_items(order, products)
+		self.create_order_items(order, items)
 		return order
 
 	def update(self, instance, validated_data):
-		products = validated_data.pop('products')
+		items = validated_data.pop('items')
 		order = super(OrderCreateUpdateSerializer, self).update(instance, validated_data)
-		order.products.clear()
-		self.create_order_items(order, products)
+		order.items.clear()
+		self.create_order_items(order, items)
 		return order
 
 	def to_representation(self, instance):

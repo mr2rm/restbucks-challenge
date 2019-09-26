@@ -18,9 +18,9 @@ class OrderItemInline(admin.TabularInline):
 
 @admin.register(Order)
 class OrderAdmin(admin.ModelAdmin):
-	list_display = ['id', 'customer', 'delivery_method', 'delivery_address', 'status']
-	list_editable = ['status']
-	list_filter = ['status', 'delivery_method']
+	list_display = ['id', 'customer', 'delivery_method', 'delivery_address', 'status', 'is_active']
+	list_editable = ['status', 'is_active']
+	list_filter = ['is_active', 'status', 'delivery_method']
 	search_fields = ['id', 'customer__username', 'delivery_address']
 	raw_id_fields = ['customer']
 	inlines = [OrderItemInline]

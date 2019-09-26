@@ -17,7 +17,7 @@ class OrderViewSet(ModelViewSet):
 	serializer_class = OrderSerializer
 	permission_classes = (IsAuthenticated,)
 	authentication_classes = (TokenAuthentication,)
-	queryset = Order.objects.all()
+	queryset = Order.objects.filter(is_active=True)
 
 	def get_queryset(self):
 		if not self.request.user.is_staff:
@@ -34,3 +34,7 @@ class OrderViewSet(ModelViewSet):
 		if self.action in ['create', 'update']:
 			return OrderCreateUpdateSerializer
 		return super(OrderViewSet, self).get_serializer_class()
+
+	def perform_destroy(self, instance):
+		instance.is_active = False
+		instance.save()
