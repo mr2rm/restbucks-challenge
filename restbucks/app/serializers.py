@@ -1,4 +1,3 @@
-from django.db.models import Sum, F
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 
@@ -16,6 +15,11 @@ class OptionsSerializer(serializers.ModelSerializer):
 		model = OrderItem
 		fields = ['milk', 'size', 'shots', 'kind']
 
+	def to_representation(self, instance):
+		options = super(OptionsSerializer, self).to_representation(instance)
+		cleaned_options = filter(lambda option: option[1], options.items())
+		return dict(cleaned_options)
+
 
 class OrderItemSerializer(serializers.ModelSerializer):
 	options = serializers.SerializerMethodField()
@@ -25,16 +29,13 @@ class OrderItemSerializer(serializers.ModelSerializer):
 		model = OrderItem
 		fields = ['product', 'count', 'options', 'price']
 
-	def get_options(self, order_item):
-		options_data = OptionsSerializer(instance=order_item).data
-		result = {}
-		for field, value in options_data.items():
-			if value:
-				result.update({field: value})
-		return result
+	@staticmethod
+	def get_options(order_item):
+		return OptionsSerializer(order_item).data
 
-	def get_price(self, order_item):
-		return order_item.count * order_item.product.price
+	@staticmethod
+	def get_price(order_item):
+		return order_item.price
 
 
 class OrderSerializer(serializers.ModelSerializer):
@@ -46,12 +47,9 @@ class OrderSerializer(serializers.ModelSerializer):
 		model = Order
 		exclude = ['last_modified']
 
-	def get_total_price(self, order):
-		return order.order_item_set.annotate(
-			item_price=F('product__price') * F('count')
-		).aggregate(
-			total_price=Sum('item_price')
-		).get('total_price')
+	@staticmethod
+	def get_total_price(order):
+		return order.price
 
 
 class OrderItemCreateUpdateSerializer(serializers.ModelSerializer):
@@ -69,8 +67,11 @@ class OrderCreateUpdateSerializer(serializers.ModelSerializer):
 		model = Order
 		fields = ['products', 'delivery_method', 'delivery_address']
 
-	def to_representation(self, instance):
-		return OrderSerializer(instance=instance).data
+	@staticmethod
+	def create_order_items(order, data):
+		for order_item in data:
+			options = order_item.pop('options', {})
+			OrderItem.objects.create(**order_item, **options, order=order)
 
 	def validate(self, attrs):
 		errors = {}
@@ -104,10 +105,18 @@ class OrderCreateUpdateSerializer(serializers.ModelSerializer):
 		return attrs
 
 	def create(self, validated_data):
-		products_data = validated_data.pop('products')
-		customer = self.context['request'].user
-		order = Order.objects.create(**validated_data, customer=customer)
-		for product_data in products_data:
-			options = product_data.pop('options', {})
-			OrderItem.objects.create(**product_data, **options, order=order)
+		products = validated_data.pop('products')
+		request = self.context['request']
+		order = Order.objects.create(**validated_data, customer=request.user)
+		self.create_order_items(order, products)
 		return order
+
+	def update(self, instance, validated_data):
+		products = validated_data.pop('products')
+		order = super(OrderCreateUpdateSerializer, self).update(instance, validated_data)
+		order.products.clear()
+		self.create_order_items(order, products)
+		return order
+
+	def to_representation(self, instance):
+		return OrderSerializer(instance).data

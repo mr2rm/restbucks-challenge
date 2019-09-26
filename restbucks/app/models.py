@@ -1,9 +1,8 @@
 from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
 from django.db import models
+from django.db.models import F, Sum
 from django.utils.text import slugify
-
-from app.functions import convert_to_text
 
 
 class AbstractTimeStamped(models.Model):
@@ -68,6 +67,14 @@ class Order(AbstractTimeStamped):
 		super(Order, self).clean()
 		if self.delivery_method == self.TAKE_AWAY and not self.delivery_address:
 			raise ValidationError({'delivery_address': ['This field is required.']})
+
+	@property
+	def price(self):
+		return self.order_item_set.annotate(
+			item_price=F('product__price') * F('count')
+		).aggregate(
+			total_price=Sum('item_price')
+		).get('total_price')
 
 
 class OrderItem(AbstractTimeStamped):
@@ -143,3 +150,7 @@ class OrderItem(AbstractTimeStamped):
 					raise ValidationError({field: ["This option is not available for the product."]})
 			elif field in self.default_values and self.product.slug in products:
 				setattr(self, field, self.default_values[field])
+
+	@property
+	def price(self):
+		return self.count * self.product.price
