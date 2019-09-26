@@ -76,13 +76,21 @@ class OrderCreateSerializer(serializers.ModelSerializer):
 		if attrs.get('delivery_method') == Order.TAKE_AWAY and not attrs.get('delivery_address'):
 			raise ValidationError({'delivery_address': ['This field is required.']})
 
-		for order_item in attrs.get('products'):
-			for key in order_item.get('options', {}):
-				product_slug = order_item.get('product').slug
-				if product_slug not in OrderItem.customization_options.get(key, []):
-					raise ValidationError({'options': ["'%s' option is not valid for '%s'" % (key, product_slug)]})
+		has_error, errors = False, []
+		for item in attrs['products']:
+			product, item_errors = item['product'], {}
+			for key in item.get('options', {}):
+				if product.slug not in OrderItem.customization_options.get(key, []):
+					has_error = True
+					key_errors = item_errors.setdefault('options', {}).setdefault(key, [])
+					key_errors.append("The option is not available.")
+			errors.append(item_errors)
+
+		if has_error:
+			raise ValidationError({'products': errors})
 
 		# TODO: set default values
+		return attrs
 
 	def create(self, validated_data):
 		products_data = validated_data.pop('products')
