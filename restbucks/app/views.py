@@ -1,15 +1,15 @@
 from rest_framework.authentication import TokenAuthentication
-from rest_framework.generics import ListAPIView
+from rest_framework.mixins import RetrieveModelMixin, ListModelMixin
 from rest_framework.permissions import IsAuthenticated
-from rest_framework.viewsets import ModelViewSet
+from rest_framework.viewsets import GenericViewSet, ModelViewSet
 
 from app.models import Product, Order
 from app.serializers import ProductSerializer, OrderSerializer, OrderCreateSerializer
 
 
-class ListProduct(ListAPIView):
-	queryset = Product.objects.all()
+class ProductViewSet(ListModelMixin, RetrieveModelMixin, GenericViewSet):
 	serializer_class = ProductSerializer
+	queryset = Product.objects.all()
 
 
 class OrderViewSet(ModelViewSet):
