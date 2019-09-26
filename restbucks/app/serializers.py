@@ -54,7 +54,7 @@ class OrderSerializer(serializers.ModelSerializer):
 		).get('total_price')
 
 
-class OrderItemCreateSerializer(serializers.ModelSerializer):
+class OrderItemCreateUpdateSerializer(serializers.ModelSerializer):
 	options = OptionsSerializer(required=False)
 
 	class Meta:
@@ -62,8 +62,8 @@ class OrderItemCreateSerializer(serializers.ModelSerializer):
 		fields = ['product', 'count', 'options']
 
 
-class OrderCreateSerializer(serializers.ModelSerializer):
-	products = OrderItemCreateSerializer(many=True)
+class OrderCreateUpdateSerializer(serializers.ModelSerializer):
+	products = OrderItemCreateUpdateSerializer(many=True)
 
 	class Meta:
 		model = Order
