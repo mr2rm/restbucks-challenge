@@ -1,11 +1,14 @@
 from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
 from django.db import models
-from django.db.models import F, Sum
 from django.utils.text import slugify
 
 
 class AbstractTimeStamped(models.Model):
+	"""
+	Abstracted timestamped model which handles created date and last modified date of objects.
+	It can be used as base class for later models.
+	"""
 	created_at = models.DateTimeField(auto_now_add=True, verbose_name='زمان ایجاد')
 	last_modified = models.DateTimeField(auto_now=True, verbose_name='آخرین به روزرسانی')
 
@@ -14,6 +17,9 @@ class AbstractTimeStamped(models.Model):
 
 
 class Product(AbstractTimeStamped):
+	"""
+	Manages available products in restbucks.
+	"""
 	name = models.CharField(max_length=20, verbose_name='نام')
 	slug = models.SlugField(unique=True, verbose_name='شناسه یکتا')
 	price = models.PositiveIntegerField(verbose_name='قیمت')
@@ -27,11 +33,17 @@ class Product(AbstractTimeStamped):
 		return self.name
 
 	def save(self, *args, **kwargs):
+		"""
+		Generate a slug for product based on its name before each save.
+		"""
 		self.slug = slugify(self.name)
 		super(Product, self).save(*args, **kwargs)
 
 
 class Order(AbstractTimeStamped):
+	"""
+	Manages order objects in restbucks.
+	"""
 	WAITING, PREPARATION, READY, DELIVERED = 'waiting', 'preparation', 'ready', 'delivered'
 	TAKE_AWAY, IN_SHOP = 'take_away', 'in_shop'
 
@@ -66,19 +78,33 @@ class Order(AbstractTimeStamped):
 
 	def clean(self):
 		super(Order, self).clean()
+
+		# delivery_address is mandatory when the delivery_method is take_away
 		if self.delivery_method == self.TAKE_AWAY and not self.delivery_address:
 			raise ValidationError({'delivery_address': ['This field is required.']})
 
 	@property
 	def price(self):
-		return self.order_item_set.annotate(
-			item_price=F('product__price') * F('count')
-		).aggregate(
-			total_price=Sum('item_price')
-		).get('total_price')
+		"""
+		Calculate total price for the order based on its items price.
+		:return: total price for order
+		"""
+		# from django.db.models import F, Sum
+		# return self.order_item_set.annotate(
+		# 	item_price=F('product__price') * F('count')
+		# ).aggregate(
+		# 	total_price=Sum('item_price')
+		# ).get('total_price')
+
+		# return sum(map(lambda item: item.price, order.order_item_set.all()))
+
+		return sum(item.price for item in self.order_item_set.all())
 
 
 class OrderItem(AbstractTimeStamped):
+	"""
+	Manages each item of the order, including count and options for a product.
+	"""
 	SKIM, SEMI, WHOLE = 'skim', 'semi', 'whole'
 	SMALL, MEDIUM, LARGE = 'small', 'medium', 'large'
 	SINGLE, DOUBLE, TRIPLE = 'single', 'double', 'triple'
@@ -145,13 +171,21 @@ class OrderItem(AbstractTimeStamped):
 
 	def clean(self):
 		super(OrderItem, self).clean()
+
 		for field, products in self.customization_options.items():
+			# check if option be available for the product
 			if getattr(self, field, None):
 				if self.product.slug not in products:
 					raise ValidationError({field: ["This option is not available for the product."]})
+
+			# set default option if available
 			elif field in self.default_values and self.product.slug in products:
 				setattr(self, field, self.default_values[field])
 
 	@property
 	def price(self):
+		"""
+		Calculate total price for the order item based on count and product price.
+		:return: total price for the item
+		"""
 		return self.count * self.product.price
