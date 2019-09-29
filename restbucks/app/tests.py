@@ -11,7 +11,8 @@ class ProductModelTests(TestCase):
 
 		# check if created_at, last_modified and slug are set
 		for field in ['created_at', 'last_modified', 'slug']:
-			self.assertIsNotNone(getattr(product, field, None))
+			value = getattr(product, field, None)
+			self.assertIsNotNone(value)
 
 		# check if slug is valid
 		self.assertEqual(product.slug, 'hot-chocolate')
@@ -66,14 +67,54 @@ class OrderItemModelTests(TestCase):
 
 	def setUp(self):
 		self.user = User.objects.create_user('test')
+		self.order = Order.objects.create(customer=self.user)
 
 	def test_creation(self):
-		pass
+		OrderItem.objects.create(order=self.order, product_id=1)
 
-	def test_options(self):
-		# check default
-		# check validation
-		pass
+		# check if order item created
+		self.assertEqual(self.order.items.count(), 1)
+
+	def test_default_options(self):
+		data = {
+			'espresso': ('shots', OrderItem.SINGLE),
+			'cappuccino': ('size', OrderItem.SMALL),
+		}
+
+		for slug, (option, default) in data.items():
+			# create order item without any default
+			product = Product.objects.get(slug=slug)
+			order_item = OrderItem(order=self.order, product=product)
+			order_item.full_clean()
+
+			# check default setting for options
+			value = getattr(order_item, option, None)
+			self.assertEqual(value, default)
+
+	def test_options_validation(self):
+		sample_options = {
+			'milk': OrderItem.WHOLE,
+			'size': OrderItem.LARGE,
+			'shots': OrderItem.TRIPLE,
+			'kind': OrderItem.GINGER,
+		}
+
+		for option, valid_products in OrderItem.customization_options.items():
+			# create order item with invalid option
+			invalid_product = Product.objects.exclude(slug__in=valid_products).first()
+			order_item = OrderItem(order=self.order, product=invalid_product)
+			setattr(order_item, option, sample_options[option])
+
+			# check if validation error raised for invalid option
+			try:
+				order_item.full_clean()
+				self.fail('Oops')
+			except ValidationError as e:
+				self.assertIn(option, e.message_dict)
 
 	def test_price(self):
-		pass
+		order_item = OrderItem.objects.create(order=self.order, product_id=1, count=3)
+		total_price = 3 * order_item.product.price
+
+		# check if order item price is correct
+		self.assertEqual(order_item.price, total_price)
